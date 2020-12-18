@@ -141,6 +141,11 @@
   <ItemGroup>
     <ClCompile Include="cuMosaic.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="color.h" />
+    <ClInclude Include="coordinate.h" />
+    <ClInclude Include="pixel.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
