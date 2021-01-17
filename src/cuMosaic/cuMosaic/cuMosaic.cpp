@@ -99,3 +99,35 @@ vector<vector<pixel>> ReadPpm(char* path) {
 
 	return grid;
 }
+
+void WritePpm(pixel* grid, char* path, int height, int width)
+{
+	cout << "Printing output image to " << path << endl;
+	auto startTime = std::chrono::high_resolution_clock::now();
+	ofstream f;
+	f.open(path, fstream::out | fstream::binary);
+
+	f << "P6" << endl;
+	f << width << " " << height << endl;
+	f << "255" << endl;
+
+	// prepare the buffer
+	char* buffer = new char[height * width * 3];
+
+	for (int row = 0; row < height; row++) {
+		for (int col = 0; col < width; col++) {
+			int bufferPos = ((row * width) + col) * 3;
+			int imagePos = (row * width) + col;
+			buffer[bufferPos] = grid[imagePos].color.r;
+			buffer[bufferPos + 1] = grid[imagePos].color.g;
+			buffer[bufferPos + 2] = grid[imagePos].color.b;
+		}
+	}
+	f.write(buffer, height * width * 3);
+
+	f.close();
+	delete[] buffer;
+	auto endTime = std::chrono::high_resolution_clock::now();
+	double elapsed = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() * 0.001;
+	std::cout << "Printed output image in " << elapsed << " ms" << std::endl;
+}
