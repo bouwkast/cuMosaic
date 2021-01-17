@@ -148,6 +148,7 @@
   <ItemGroup>
     <ClInclude Include="color.h" />
     <ClInclude Include="coordinate.h" />
+    <ClInclude Include="cuMosaic.h" />
     <ClInclude Include="pixel.h" />
   </ItemGroup>
   <ItemGroup>
