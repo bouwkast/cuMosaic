@@ -91,6 +91,44 @@ color* ComputeMeanColor(pixel* grid, pixel* seeds, int numSeeds, int width, int 
 	return colors;
 }
 
+int ComputeSearchRadius(std::vector<coordinate>& points, vector<vector<pixel>>& image)
+{
+	auto startTime = std::chrono::high_resolution_clock::now();
+	float searchRadius = 0.0;
+	for (int row = 0; row < image.size(); row++) {
+		for (int col = 0; col < image[0].size(); col++) {
+			unsigned int minDistance = INT_MAX;
+			for (int i = 0; i < points.size(); i++) {
+				int seedRow = (int)floor(points[i].x);
+				int seedCol = (int)floor(points[i].y);
+				if (row == seedRow && col == seedCol) {
+					continue; // skip as this pixel is a seed
+				}
+
+				unsigned int distance = EuclideanDistanceSquared(seedRow, seedCol, row, col);
+				if (distance < minDistance) {
+					minDistance = distance;
+				}
+			}
+			// computed the distance to every seed from this pixel
+			if (minDistance > searchRadius) {
+				searchRadius = minDistance;
+			}
+		}
+	}
+
+	// need to square root the value to get the correct distance
+	searchRadius = sqrtf(searchRadius);
+
+	auto endTime = std::chrono::high_resolution_clock::now();
+	double elapsed = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() * 0.001;
+	std::cout << "Computed search radius in " << elapsed << " ms" << std::endl;
+
+	cout << "Maximum distance between a pixel and its nearest seed: " << searchRadius << endl;
+	searchRadius = ceil(searchRadius) + 1; // eg  10.1 -> 12 (guaranteed we will be searching slightly more than we need to)
+	return (int)searchRadius;
+}
+
 vector<coordinate> GenerateSeedsPoisson(int width, int height, float radius) {
 	auto startTime = std::chrono::high_resolution_clock::now();
 	// increasing k == more samples
