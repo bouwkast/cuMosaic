@@ -15,6 +15,81 @@ int main()
     srand(time(NULL));
 }
 
+unsigned int EuclideanDistanceSquared(int x1, int y1, int x2, int y2) {
+	return (unsigned int)(pow((x2 - x1), 2)) + (pow((y2 - y1), 2));
+}
+
+void SetSeedsBlack(pixel* seeds, pixel* grid, int numSeeds, int width)
+{
+	for (int i = 0; i < numSeeds; i++) {
+		int pos = (seeds[i].row * width) + seeds[i].col;
+		grid[pos].color.r = 0;
+		grid[pos].color.g = 0;
+		grid[pos].color.b = 0;
+	}
+}
+
+pixel* GenerateRandomSeeds(int width, int height, int numSeeds)
+{
+	int max = width * height;
+	// note seeds are encoded as position in a 1D representation of the 2D grid
+	pixel* seeds = new pixel[numSeeds];
+
+	for (int i = 0; i < numSeeds; i++) {
+		int row = rand() % height;
+		int col = rand() % width;
+		seeds[i].row = row;
+		seeds[i].col = col;
+	}
+
+	return seeds;
+}
+
+
+color* CreateRandomColors(int numSeeds)
+{
+	color* colors = new color[numSeeds];
+	for (int i = 0; i < numSeeds; i++) {
+		colors[i].r = rand() % 255;
+		colors[i].g = rand() % 255;
+		colors[i].b = rand() % 255;
+
+	}
+	return colors;
+}
+
+color* ComputeMeanColor(pixel* grid, pixel* seeds, int numSeeds, int width, int height, int distance) {
+	color* colors = new color[numSeeds];
+
+	for (int i = 0; i < numSeeds; i++) {
+		int r = 0;
+		int g = 0;
+		int b = 0;
+		int count = 0;
+		int startRow = max(0, (int)seeds[i].row - distance);
+		int endRow = min(height - 1, (int)seeds[i].row + distance);
+
+		int startCol = max(0, (int)seeds[i].col - distance);;
+		int endCol = min(width - 1, (int)seeds[i].col + distance);
+		for (int row = startRow; row <= endRow; row++) {
+			for (int col = startCol; col <= endCol; col++) {
+				count++;
+				int pos = (row * width) + col;
+				r += grid[pos].color.r;
+				g += grid[pos].color.g;
+				b += grid[pos].color.b;
+			}
+		}
+
+		colors[i].r = (unsigned char)ceil((float)r / (float)count);
+		colors[i].g = (unsigned char)ceil((float)g / (float)count);
+		colors[i].b = (unsigned char)ceil((float)b / (float)count);
+	}
+
+
+	return colors;
+}
+
 vector<vector<pixel>> ReadPpm(char* path) {
 	cout << "Reading image via: " << path << endl;
 	auto startTime = std::chrono::high_resolution_clock::now();
