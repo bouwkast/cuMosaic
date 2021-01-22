@@ -8,12 +8,140 @@
 #include <sstream>
 #include <random>
 
+
+// if true we assume local search will be 2r
+constexpr auto FAST_CALC = true;
+extern "C" void CudaComputeVoronoi(pixel * grid, pixel * seeds, int gridHeight, int gridWidth, int numSeeds, int searchRadius);
 int main()
 {
-    std::cout << "START" << std::endl;
+	std::cout << "START" << std::endl;
 
-    // init rand with random seed
-    srand(time(NULL));
+	// START Initialization of image/poisson/mean color sampling
+
+	// init rand with random seed
+	srand(time(NULL));
+
+	// hardcoding image paths for testing
+	char input[] = "test.ppm";
+	vector<vector<pixel>> image = ReadPpm(input);
+
+	// extract out the image dimensions
+	int height = image.size();
+	int width = image[0].size();
+
+	cout << "Image read with height x width of " << height << " x " << width << " pixels." << endl;
+
+	float radius = 10.0; // minimum distance between any two points
+	cout << "Generating seeds with Fast Poisson Disk Sampling with a radius of " << radius << endl;
+
+	vector<coordinate> points = GenerateSeedsPoisson(width, height, radius);
+	int numSeeds = points.size();
+	cout << "Poisson sampling generated " << numSeeds << " seeds." << endl;
+
+	// compute the maximal minimum distance between any two seeds
+	int searchRadius = 0;
+	if (FAST_CALC) {
+		/*
+			We are assuming here that our Poisson sampling algorithm was able to reliably place points
+			within 2r of any other point. Meaning that the maximal minimum distance between any two points
+			is less than 2r.
+			While the algorithm doesn't guarantee this, through observation it is quite true and
+			most of the points it generates are typically within roughly 1.1r of eachother.
+
+		*/
+		searchRadius = (int)ceil(radius * 2);
+	}
+	else {
+		searchRadius = ComputeSearchRadius(points, image); // O(nm) 
+	}
+
+	cout << "Modified search radius for computing voronoi cells is " << searchRadius << endl;
+
+	bool useLocalSearch = (int)searchRadius * (int)searchRadius < points.size();
+	if (useLocalSearch) {
+		cout << "Using local seed search." << endl;
+	}
+	else {
+		searchRadius = -1;
+		cout << "Global searching through all seeds." << endl;
+	}
+	pixel* grid = new pixel[width * height];
+
+	// init grid
+	ResetGridPixels(grid, image, height, width);
+
+	// init seeds from poisson points
+	pixel* seeds = new pixel[numSeeds];
+	for (int i = 0; i < numSeeds; i++) {
+		// important to take the floor; otherwise we could be out of bounds
+		seeds[i].row = (int)floor(points[i].y);
+		seeds[i].col = (int)floor(points[i].x);
+	}
+
+	// initialize the colors
+	int colorSamplingRadius = (int)(ceil(radius / 2));
+	color* colors = ComputeMeanColor(grid, seeds, numSeeds, width, height, colorSamplingRadius);
+	//color* colors = CreateRandomColors(numSeeds);
+
+	// update seeds with their colors
+	for (int i = 0; i < numSeeds; i++) {
+		seeds[i].color = colors[i];
+	}
+
+	// iterate through seeds, mark grid positions that are to be used as seeds
+	for (int i = 0; i < numSeeds; i++) {
+		int pos = (seeds[i].row * width) + seeds[i].col;
+		grid[pos].seed = 1;
+		grid[pos].color = seeds[i].color;
+	}
+
+	// END Initialization
+
+	cout << "Starting serial test" << endl;
+	// compute Voronoi
+	auto startTime = std::chrono::high_resolution_clock::now();
+	/*if (useLocalSearch) {
+		ComputeVoronoiLocal(grid, height, width, (int)searchRadius);
+	}
+	else {
+		ComputeVoronoiGlobal(grid, seeds, numSeeds, height, width);
+	}*/
+	auto endTime = std::chrono::high_resolution_clock::now();
+	double elapsed = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() * 0.001;
+	std::cout << "Computed Voronoi in " << elapsed << " ms" << std::endl;
+
+	// setting seeds black to validate that seeds were properly placed
+	SetSeedsBlack(seeds, grid, numSeeds, width);
+
+	// print image
+	WritePpm(grid, (char*)"output_serial.ppm", height, width);
+
+	ResetGridPixels(grid, image, height, width);
+	// make sure our seeds are still correct
+	for (int i = 0; i < numSeeds; i++) {
+		int pos = (seeds[i].row * width) + seeds[i].col;
+		grid[pos].seed = 1;
+		grid[pos].color = seeds[i].color;
+	}
+
+	cout << "Starting GPU test" << endl;
+	startTime = std::chrono::high_resolution_clock::now();
+	CudaComputeVoronoi(grid, seeds, height, width, numSeeds, searchRadius);
+	endTime = std::chrono::high_resolution_clock::now();
+	elapsed = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() * 0.001;
+	std::cout << "Computed Voronoi GPU in " << elapsed << " ms" << std::endl;
+
+	// setting seeds black to validate that seeds were properly placed
+	//SetSeedsBlack(seeds, grid, numSeeds, width);
+
+	// print image
+	WritePpm(grid, (char*)"data/logo/Ring_Nebula_fin.ppm", height, width);
+
+	std::cout << "END" << std::endl;
+
+	delete[] grid;
+	delete[] seeds;
+	delete[] colors;
 }
 
 unsigned int EuclideanDistanceSquared(int x1, int y1, int x2, int y2) {
@@ -27,6 +155,21 @@ void SetSeedsBlack(pixel* seeds, pixel* grid, int numSeeds, int width)
 		grid[pos].color.r = 0;
 		grid[pos].color.g = 0;
 		grid[pos].color.b = 0;
+	}
+}
+
+void ResetGridPixels(pixel* grid, vector<vector<pixel>> image, int height, int width)
+{
+	for (unsigned short row = 0; row < height; row++) {
+		for (unsigned short col = 0; col < width; col++) {
+			int pos = (row * width) + col;
+			grid[pos].row = row;
+			grid[pos].col = col;
+			grid[pos].color.r = image[row][col].color.r;
+			grid[pos].color.g = image[row][col].color.g;
+			grid[pos].color.b = image[row][col].color.b;
+			grid[pos].seed = 0;
+		}
 	}
 }
 
@@ -241,7 +384,7 @@ bool IsValid(coordinate point, int width, int height, float radius, float cellSi
 	return false;
 }
 
-vector<vector<pixel>> ReadPpm(char* path) {
+vector<vector<pixel>> ReadPpm(char path[]) {
 	cout << "Reading image via: " << path << endl;
 	auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -326,7 +469,7 @@ vector<vector<pixel>> ReadPpm(char* path) {
 	return grid;
 }
 
-void WritePpm(pixel* grid, char* path, int height, int width)
+void WritePpm(pixel* grid, char path[], int height, int width)
 {
 	cout << "Printing output image to " << path << endl;
 	auto startTime = std::chrono::high_resolution_clock::now();
@@ -356,4 +499,54 @@ void WritePpm(pixel* grid, char* path, int height, int width)
 	auto endTime = std::chrono::high_resolution_clock::now();
 	double elapsed = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() * 0.001;
 	std::cout << "Printed output image in " << elapsed << " ms" << std::endl;
+}
+
+void ComputeVoronoiLocal(pixel* grid, int height, int width, int searchRadius) {
+	for (int row = 0; row < height; row++) {
+		for (int col = 0; col < width; col++) {
+			int pos = (row * width) + col;
+			float minDistance = FLT_MAX;
+			pixel closestSeed;
+			// create the bounds for the bounding box around the current pixel
+			int startRow = max(0, (int)grid[pos].row - searchRadius);
+			int endRow = min(height - 1, (int)grid[pos].row + searchRadius);
+
+			int startCol = max(0, (int)grid[pos].col - searchRadius);
+			int endCol = min(width - 1, (int)grid[pos].col + searchRadius);
+
+			for (int boxRow = startRow; boxRow <= endRow; boxRow++) {
+				for (int boxCol = startCol; boxCol <= endCol; boxCol++) {
+					int boxPos = (boxRow * width) + boxCol;
+					if (grid[boxPos].seed) {
+						// compute distance
+						unsigned int distance = EuclideanDistanceSquared(row, col, boxRow, boxCol);
+						if (distance <= minDistance) {
+							minDistance = distance;
+							closestSeed = grid[boxPos];
+						}
+					} // else it isn't so we continue on
+				}
+			}
+			grid[pos].color = closestSeed.color;
+		}
+	}
+}
+
+void ComputeVoronoiGlobal(pixel* grid, pixel* seeds, int numSeeds, int height, int width)
+{
+	for (int row = 0; row < height; row++) {
+		for (int col = 0; col < width; col++) {
+			int pos = (row * width) + col;
+			float minDistance = FLT_MAX;
+			pixel closestSeed;
+			for (int seedPos = 0; seedPos < numSeeds; seedPos++) {
+				unsigned int distance = EuclideanDistanceSquared(row, col, seeds[seedPos].row, seeds[seedPos].col);
+				if (distance <= minDistance) {
+					minDistance = distance;
+					closestSeed = seeds[seedPos];
+				}
+			}
+			grid[pos].color = closestSeed.color;
+		}
+	}
 }
