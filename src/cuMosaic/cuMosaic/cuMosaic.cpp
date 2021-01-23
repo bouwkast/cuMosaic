@@ -12,8 +12,22 @@
 // if true we assume local search will be 2r
 constexpr auto FAST_CALC = true;
 extern "C" void CudaComputeVoronoi(pixel * grid, pixel * seeds, int gridHeight, int gridWidth, int numSeeds, int searchRadius);
-int main()
+int main(int argc, char *argv[])
 {
+	// we gonna need the following arguments "input.ppm" "output.ppm"  (min pixels between each seed)10
+
+	if (argc != 4) {
+		std::cout << "Expected inputs: \"inputfile.ppm\" \"outputfile.ppm\" MinDistanceBetweenSeeds(float)" << std::endl;
+		// TODO make this follow the standard "USAGE" format
+		return 1;
+	}
+
+
+	std::string inputFile = argv[1];
+	std::string outputFile = argv[2];
+	std::string::size_type sz;     // alias of size_t
+	float radius = std::stof(argv[3], &sz); // minimum distance between any two points
+
 	std::cout << "START" << std::endl;
 
 	// START Initialization of image/poisson/mean color sampling
@@ -22,8 +36,7 @@ int main()
 	srand(time(NULL));
 
 	// hardcoding image paths for testing
-	char input[] = "test.ppm";
-	vector<vector<pixel>> image = ReadPpm(input);
+	vector<vector<pixel>> image = ReadPpm(inputFile);
 
 	// extract out the image dimensions
 	int height = image.size();
@@ -31,7 +44,6 @@ int main()
 
 	cout << "Image read with height x width of " << height << " x " << width << " pixels." << endl;
 
-	float radius = 10.0; // minimum distance between any two points
 	cout << "Generating seeds with Fast Poisson Disk Sampling with a radius of " << radius << endl;
 
 	vector<coordinate> points = GenerateSeedsPoisson(width, height, radius);
@@ -114,7 +126,7 @@ int main()
 	SetSeedsBlack(seeds, grid, numSeeds, width);
 
 	// print image
-	WritePpm(grid, (char*)"output_serial.ppm", height, width);
+	WritePpm(grid, outputFile, height, width);
 
 	ResetGridPixels(grid, image, height, width);
 	// make sure our seeds are still correct
@@ -135,7 +147,7 @@ int main()
 	//SetSeedsBlack(seeds, grid, numSeeds, width);
 
 	// print image
-	WritePpm(grid, (char*)"data/logo/Ring_Nebula_fin.ppm", height, width);
+	WritePpm(grid, outputFile, height, width);
 
 	std::cout << "END" << std::endl;
 
@@ -384,7 +396,7 @@ bool IsValid(coordinate point, int width, int height, float radius, float cellSi
 	return false;
 }
 
-vector<vector<pixel>> ReadPpm(char path[]) {
+vector<vector<pixel>> ReadPpm(std::string path) {
 	cout << "Reading image via: " << path << endl;
 	auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -469,7 +481,7 @@ vector<vector<pixel>> ReadPpm(char path[]) {
 	return grid;
 }
 
-void WritePpm(pixel* grid, char path[], int height, int width)
+void WritePpm(pixel* grid, std::string path , int height, int width)
 {
 	cout << "Printing output image to " << path << endl;
 	auto startTime = std::chrono::high_resolution_clock::now();

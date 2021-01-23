@@ -91,9 +91,9 @@ color* CreateRandomColors(int numSeeds);
 	Quickly reads a .ppm file from the given path and returns it as
 	a vector of vector of pixels to represent the base image.
 */
-vector<vector<pixel>> ReadPpm(char path[]);
+vector<vector<pixel>> ReadPpm(std::string path);
 
 /*
 	Quickly writes out a .ppm file to path that represents the grid.
 */
-void WritePpm(pixel* grid, char path[], int height, int width);
+void WritePpm(pixel* grid, std::string path, int height, int width);
