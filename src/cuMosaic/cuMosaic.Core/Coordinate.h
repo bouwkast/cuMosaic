@@ -3,7 +3,7 @@
 /*
 	Structure that will assist with the computations needed with Poisson Fast Disk Sampling.
 */
-struct coordinate {
+struct Coordinate {
 	float x;
 	float y;
 };

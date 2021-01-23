@@ -18,24 +18,16 @@
     <ClCompile Include="cuMosaic.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\cuMosaic.Core\FileHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="coordinate.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="color.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="pixel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="cuMosaic.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="kernel.cu">
-      <Filter>Source Files</Filter>
-    </None>
+    <CudaCompile Include="..\cuMosaic.Core\kernel.cu" />
   </ItemGroup>
 </Project>

@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cuMosaic", "cuMosaic\cuMosaic.vcxproj", "{E4E19C6A-03F5-4A56-A047-B522138B2328}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cuMosaic.Core", "cuMosaic.Core\cuMosaic.Core.vcxproj", "{846B2F6D-E9C2-45F7-9E2B-F87821335B97}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,12 @@ Global
 		{E4E19C6A-03F5-4A56-A047-B522138B2328}.Release|x64.Build.0 = Release|x64
 		{E4E19C6A-03F5-4A56-A047-B522138B2328}.Release|x86.ActiveCfg = Release|Win32
 		{E4E19C6A-03F5-4A56-A047-B522138B2328}.Release|x86.Build.0 = Release|Win32
+		{846B2F6D-E9C2-45F7-9E2B-F87821335B97}.Debug|x64.ActiveCfg = Debug|x64
+		{846B2F6D-E9C2-45F7-9E2B-F87821335B97}.Debug|x64.Build.0 = Debug|x64
+		{846B2F6D-E9C2-45F7-9E2B-F87821335B97}.Debug|x86.ActiveCfg = Debug|x64
+		{846B2F6D-E9C2-45F7-9E2B-F87821335B97}.Release|x64.ActiveCfg = Release|x64
+		{846B2F6D-E9C2-45F7-9E2B-F87821335B97}.Release|x64.Build.0 = Release|x64
+		{846B2F6D-E9C2-45F7-9E2B-F87821335B97}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
