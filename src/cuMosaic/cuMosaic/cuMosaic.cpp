@@ -12,21 +12,71 @@
 // if true we assume local search will be 2r
 constexpr auto FAST_CALC = true;
 extern "C" void CudaComputeVoronoi(pixel * grid, pixel * seeds, int gridHeight, int gridWidth, int numSeeds, int searchRadius);
+
+static void ShowUsage(std::string programName) {
+	std::cerr << "Usage: " << programName << " <option(s)>\n"
+		<< "Options(-short,--long):\n"
+		<< "\t-h,--help\t\tDisplays this usage message\n"
+		<< "\t-i,--input\t\tThe path to the input image encoded in binary PPM format. e.g. \"imgs\\test.ppm\"\n"
+		<< "\t-o,--output\t\tThe path to store the output image in binary PPM format. e.g. \"imgs\\output.ppm\"\n"
+		<< "\t-d,--distance\t\tThe minimum allowable distance (roughly in pixels) between any seed generated.\n\t\t\t\t\t\tFloat within range (0, X*Y-1] where X is the image width and Y is the image height.\n\t\t\t\t\t\tSmaller values & larger images will take longer to process.";
+	// todo implement this http://www.cplusplus.com/articles/DEN36Up4/
+}
+
+static std::string ExtractArgumentValue(int index, std::string argument, int argc, char* argv[]) {
+	if (index + 1 >= argc) {
+		std::cerr << argument << " requires a value, please refer to the --help output for further information." << std::endl;
+		ShowUsage(argv[0]);
+		throw 1; // TODO is this standard practice in C++?
+	}
+
+	std::string extractedValue = argv[index + 1];
+	return extractedValue;
+}
+
 int main(int argc, char *argv[])
 {
 	// we gonna need the following arguments "input.ppm" "output.ppm"  (min pixels between each seed)10
 
-	if (argc != 4) {
-		std::cout << "Expected inputs: \"inputfile.ppm\" \"outputfile.ppm\" MinDistanceBetweenSeeds(float)" << std::endl;
+	float radius = 10.0;
+	std::string inputFile = "input.ppm";
+	std::string outputFile = "output.ppm";
+
+	if (argc != 7) {
+		ShowUsage(argv[0]);
 		// TODO make this follow the standard "USAGE" format
 		return 1;
 	}
 
-
-	std::string inputFile = argv[1];
-	std::string outputFile = argv[2];
-	std::string::size_type sz;     // alias of size_t
-	float radius = std::stof(argv[3], &sz); // minimum distance between any two points
+	/// TODO this is a basic implementation, none of the inputs are really validated here, which isn't really an issue
+	// extract the command options, this allows them to be in any order
+	for (int i = 1; i < argc; ++i) {
+		std::string argument = argv[i];
+		std::string value;
+		if ((argument == "-h") || (argument == "--help")) {
+			ShowUsage(argv[0]);
+			return 0;
+		}
+		else if ((argument == "-i") || (argument == "--input")) {
+			value = ExtractArgumentValue(i++, argument, argc, argv);
+			inputFile = value;
+		}
+		else if ((argument == "-o") || argument == "--output") {
+			value = ExtractArgumentValue(i++, argument, argc, argv);
+			outputFile = value;
+		}
+		else if ((argument == "-d") || argument == "--distance") {
+			value = ExtractArgumentValue(i++, argument, argc, argv);
+			// TODO I don't fully understand why I need to do the "size_type" here, should look into that
+			std::string::size_type sz;     // alias of size_t
+			radius = std::stof(value, &sz); // minimum distance between any two points
+		}
+		else {
+			std::cerr << "Unknown option entered: " << argument << std::endl;
+			ShowUsage(argv[0]);
+			return 1;
+		}
+	}
 
 	std::cout << "START" << std::endl;
 
