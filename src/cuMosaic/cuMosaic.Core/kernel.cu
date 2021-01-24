@@ -1,7 +1,7 @@
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-#include "pixel.h"
+#include "Pixel.h"
 #include <stdio.h>
 #include <limits>
 #include <chrono>
@@ -10,11 +10,12 @@
 
 #define BLOCK_SIZE 1024
 
-__device__ int EuclideanDistanceSquared(int x1, int y1, int x2, int y2) {
+// TODO I'm not sure if the DistanceFunction.EuclideanDistanceSquared can be used within this cuda code
+__device__ int CudaEuclideanDistanceSquared(int x1, int y1, int x2, int y2) {
 	return (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
 }
 
-__global__ void VoronoiGlobalSearch(pixel* cudaGrid, pixel* cudaSeeds, int gridHeight, int gridWidth, int numSeeds) {
+__global__ void VoronoiGlobalSearch(Pixel* cudaGrid, Pixel* cudaSeeds, int gridHeight, int gridWidth, int numSeeds) {
 	int pos = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (pos < (gridHeight * gridWidth)) {
@@ -22,9 +23,9 @@ __global__ void VoronoiGlobalSearch(pixel* cudaGrid, pixel* cudaSeeds, int gridH
 			return;
 		}
 		unsigned int minDistance = INT_MAX;
-		pixel closestSeed;
+		Pixel closestSeed;
 		for (int seedPos = 0; seedPos < numSeeds; seedPos++) {
-			int distance = EuclideanDistanceSquared(cudaGrid[pos].row, cudaGrid[pos].col, cudaSeeds[seedPos].row, cudaSeeds[seedPos].col);
+			int distance = CudaEuclideanDistanceSquared(cudaGrid[pos].row, cudaGrid[pos].col, cudaSeeds[seedPos].row, cudaSeeds[seedPos].col);
 
 			if (distance <= minDistance) {
 				minDistance = distance;
@@ -37,7 +38,7 @@ __global__ void VoronoiGlobalSearch(pixel* cudaGrid, pixel* cudaSeeds, int gridH
 	}
 }
 
-__global__ void VoronoiLocalSearch(pixel* cudaGrid, pixel* cudaSeeds, int gridHeight, int gridWidth, int searchRadius, int numSeeds) {
+__global__ void VoronoiLocalSearch(Pixel* cudaGrid, Pixel* cudaSeeds, int gridHeight, int gridWidth, int searchRadius, int numSeeds) {
 	// compute grid position
 	int pos = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -72,14 +73,14 @@ __global__ void VoronoiLocalSearch(pixel* cudaGrid, pixel* cudaSeeds, int gridHe
 
 	unsigned int minDistance = INT_MAX;
 	bool success = false;
-	pixel closestSeed;
+	Pixel closestSeed;
 
 	// iterate through local search space and find closest seed
 	for (int boxRow = startRow; boxRow <= endRow; boxRow++) {
 		for (int boxCol = startCol; boxCol <= endCol; boxCol++) {
 			int boxPos = (boxRow * gridWidth) + boxCol;
 			if (cudaGrid[boxPos].seed) {
-				int dist = EuclideanDistanceSquared(cudaGrid[pos].row, cudaGrid[pos].col, cudaGrid[boxPos].row, cudaGrid[boxPos].col);
+				int dist = CudaEuclideanDistanceSquared(cudaGrid[pos].row, cudaGrid[pos].col, cudaGrid[boxPos].row, cudaGrid[boxPos].col);
 
 				if (dist <= minDistance) {
 					minDistance = dist;
@@ -99,7 +100,7 @@ __global__ void VoronoiLocalSearch(pixel* cudaGrid, pixel* cudaSeeds, int gridHe
 	// Note - never actually seen the local search fail, but it is a possibility
 	minDistance = INT_MAX;
 	for (int seedPos = 0; seedPos < numSeeds; seedPos++) {
-		int distance = EuclideanDistanceSquared(cudaGrid[pos].row, cudaGrid[pos].col, cudaSeeds[seedPos].row, cudaSeeds[seedPos].col);
+		int distance = CudaEuclideanDistanceSquared(cudaGrid[pos].row, cudaGrid[pos].col, cudaSeeds[seedPos].row, cudaSeeds[seedPos].col);
 
 		if (distance <= minDistance) {
 			minDistance = distance;
@@ -111,12 +112,12 @@ __global__ void VoronoiLocalSearch(pixel* cudaGrid, pixel* cudaSeeds, int gridHe
 	cudaGrid[pos].color = closestSeed.color;
 }
 
-extern "C" void CudaComputeVoronoi(pixel * grid, pixel * seeds, int gridHeight, int gridWidth, int numSeeds, int searchRadius) {
+extern "C" void CudaComputeVoronoi(Pixel * grid, Pixel * seeds, int gridHeight, int gridWidth, int numSeeds, int searchRadius) {
 	cudaError_t result;
 
 	// cuda related data
-	pixel* cudaGrid;
-	pixel* cudaSeeds;
+	Pixel* cudaGrid;
+	Pixel* cudaSeeds;
 
 	int gridSize = gridWidth * gridHeight;
 
@@ -128,27 +129,27 @@ extern "C" void CudaComputeVoronoi(pixel * grid, pixel * seeds, int gridHeight, 
 	}
 
 	// allocate data for our grid, seeds, and colors
-	result = cudaMalloc((void**)&cudaGrid, sizeof(pixel) * gridSize);
+	result = cudaMalloc((void**)&cudaGrid, sizeof(Pixel) * gridSize);
 	if (result != cudaSuccess) {
 		fprintf(stderr, "cudaMalloc failed for grid allocation.");
 		exit(1);
 	}
 
-	result = cudaMalloc((void**)&cudaSeeds, sizeof(pixel) * numSeeds);
+	result = cudaMalloc((void**)&cudaSeeds, sizeof(Pixel) * numSeeds);
 	if (result != cudaSuccess) {
 		fprintf(stderr, "cudaMalloc failed for seed allocation.");
 		exit(1);
 	}
 
 	// copy over our grid
-	result = cudaMemcpy(cudaGrid, grid, sizeof(pixel) * gridSize, cudaMemcpyHostToDevice);
+	result = cudaMemcpy(cudaGrid, grid, sizeof(Pixel) * gridSize, cudaMemcpyHostToDevice);
 	if (result != cudaSuccess) {
 		fprintf(stderr, "cudaMemcpy failed while downloading grid data to device.");
 		exit(1);
 	}
 
 	// copy over our seeds
-	result = cudaMemcpy(cudaSeeds, seeds, sizeof(pixel) * numSeeds, cudaMemcpyHostToDevice);
+	result = cudaMemcpy(cudaSeeds, seeds, sizeof(Pixel) * numSeeds, cudaMemcpyHostToDevice);
 	if (result != cudaSuccess) {
 		fprintf(stderr, "cudaMemcpy failed while downloading seed data to device.");
 		exit(1);
@@ -179,7 +180,7 @@ extern "C" void CudaComputeVoronoi(pixel * grid, pixel * seeds, int gridHeight, 
 	}
 
 	// copy over our grid data
-	result = cudaMemcpy(grid, cudaGrid, sizeof(pixel) * gridSize, cudaMemcpyDeviceToHost);
+	result = cudaMemcpy(grid, cudaGrid, sizeof(Pixel) * gridSize, cudaMemcpyDeviceToHost);
 	if (result != cudaSuccess) {
 		fprintf(stderr, "cudaMemcpy failed while uploading grid data from the device.");
 		exit(1);
