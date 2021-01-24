@@ -10,6 +10,8 @@ A CUDA-accelerated Voronoi diagram generator to apply a Mosaic filter on large i
 
 ## Sample Images
 
+> Note - it is recommended to click on the output images to better see what changed.
+
 | Input Image | Output Image| Link to Original |
 |:-----:|:------:|:------:|
 |  ![Ring Nebula Original](docs/imgs/ring_nebula_original.png) |  ![Ring Nebula Mosaiced](docs/imgs/ring_nebula_voronoi.png)  |  [Ring Nebula](https://images.nasa.gov/details-GSFC_20171208_Archive_e001465)  |
