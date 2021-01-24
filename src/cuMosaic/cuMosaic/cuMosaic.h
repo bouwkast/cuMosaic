@@ -7,12 +7,6 @@
 using namespace std;
 
 /*
-	Computes Euclidean distance between two points, but forgoes
-	the square root for performance.
-*/
-unsigned int EuclideanDistanceSquared(int x1, int y1, int x2, int y2);
-
-/*
 	After Voronoi computation is completed this can iterate over the
 	seeds and turn their color to be black. This allows for the
 	seeds to b visible in the output image.
@@ -40,21 +34,6 @@ void ResetGridPixels(Pixel* grid, vector<vector<Pixel>>, int height, int width);
 	than enough to properly compute the local search.
 */
 int ComputeSearchRadius(std::vector<Coordinate>& points, vector<vector<Pixel>>& image);
-
-/*
-	Implementation of Dr Robert Bridson's
-	"Fast Poisson Disk Sampling in Arbitrary Dimensions"
-	to randomly, but uniformly, distribute seeds throughout the image.
-*/
-vector<Coordinate> GenerateSeedsPoisson(int width, int height, float radius);
-
-/*
-	Helper function for generate_seeds_poisson.
-	Validates that the given point is at least radius
-	away from any other point created.
-*/
-bool IsValid(Coordinate point, int width, int height, float radius, float cellSize,
-	vector<Coordinate>& points, vector<vector<int>>& grid);
 
 /*
 	For each Pixel in the grid, iterate through all seeds

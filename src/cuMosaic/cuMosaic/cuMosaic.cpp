@@ -7,6 +7,8 @@
 #include <string>
 #include <sstream>
 #include <random>
+#include <DistanceFunctions.cpp>
+#include <FastPoisson.h>
 using namespace std;
 
 // if true we assume local search will be 2r
@@ -97,8 +99,8 @@ int main(int argc, char *argv[])
 	std::cout << "Image read with height x width of " << height << " x " << width << " Pixels." << endl;
 
 	cout << "Generating seeds with Fast Poisson Disk Sampling with a radius of " << radius << endl;
-
-	vector<Coordinate> points = GenerateSeedsPoisson(width, height, radius);
+	FastPoisson poissonGenerator = FastPoisson(width, height, radius);
+	vector<Coordinate> points = poissonGenerator.GenerateSeedsPoisson();
 	int numSeeds = points.size();
 	cout << "Poisson sampling generated " << numSeeds << " seeds." << endl;
 
@@ -206,10 +208,6 @@ int main(int argc, char *argv[])
 	delete[] grid;
 	delete[] seeds;
 	delete[] Colors;
-}
-
-unsigned int EuclideanDistanceSquared(int x1, int y1, int x2, int y2) {
-	return (unsigned int)(pow((x2 - x1), 2)) + (pow((y2 - y1), 2));
 }
 
 void SetSeedsBlack(Pixel* seeds, Pixel* grid, int numSeeds, int width)
@@ -334,118 +332,6 @@ int ComputeSearchRadius(std::vector<Coordinate>& points, vector<vector<Pixel>>& 
 	cout << "Maximum distance between a Pixel and its nearest seed: " << searchRadius << endl;
 	searchRadius = ceil(searchRadius) + 1; // eg  10.1 -> 12 (guaranteed we will be searching slightly more than we need to)
 	return (int)searchRadius;
-}
-
-vector<Coordinate> GenerateSeedsPoisson(int width, int height, float radius) {
-	auto startTime = std::chrono::high_resolution_clock::now();
-	// increasing k == more samples
-	int k = 30; // rejection limit (recommended from the paper)
-	// cell size to guarantee that each cell can have at most 1 sample
-	float cellSize = radius / sqrtf(2);
-
-	// these are the dimensions of the accelerator grid
-	int correctedWidth = (int)(ceil((float)width / cellSize));
-	int correctedHeight = (int)(ceil((float)height / cellSize));
-
-	// grid to speed up rejection of generated samples
-	vector<vector<int>> backingGrid;
-	for (int row = 0; row < correctedHeight; row++) {
-		backingGrid.push_back(vector<int>(correctedWidth));
-		//for (int col = 0; col < correctedWidth; col++) {
-		//	backingGrid[row].push_back(0); // indicates empty
-		//}
-	}
-
-	vector<Coordinate> points;
-	vector<Coordinate> activePoints;
-
-	// for uniform float dist: https://en.cppreference.com/w/cpp/numeric/random/uniform_real_distribution
-	std::random_device randomDevice;
-	std::mt19937 gen(randomDevice());
-	std::uniform_real<float> uniformFloat(0.0, 1.0);
-	std::uniform_real<float> uniformRadialDistance(radius, 2 * radius);
-
-	// init by adding an active point at the center
-	Coordinate initializerPoint;
-	initializerPoint.x = width / 2;
-	initializerPoint.y = height / 2;
-	activePoints.push_back(initializerPoint);
-
-	// while we have active points generate additional points
-	while (!activePoints.empty()) {
-		// choose one of the active points to generate points around
-		int index = rand() % activePoints.size();
-		bool accept = false;
-		Coordinate origin = activePoints[index]; // where we will generate points around
-
-		for (int i = 0; i < k; i++) {
-			float angle = uniformFloat(gen) * M_PI * 2;
-			Coordinate direction;
-			direction.x = sin(angle);
-			direction.y = cos(angle);
-
-			Coordinate generatedPoint;
-			// get a distance between radius and 2*radius
-			float distance = uniformRadialDistance(gen); // distance both x and y
-			direction.x = direction.x * distance;
-			direction.y = direction.y * distance;
-			generatedPoint.x = origin.x + direction.x;
-			generatedPoint.y = origin.y + direction.y;
-
-			if (IsValid(generatedPoint, width, height, radius, cellSize, points, backingGrid)) {
-				points.push_back(generatedPoint);
-				activePoints.push_back(generatedPoint);
-				int backingX = (int)(generatedPoint.x / cellSize);
-				int backingY = (int)(generatedPoint.y / cellSize);
-				backingGrid[backingY][backingX] = points.size();
-				accept = true;
-				break;
-			}
-
-		}
-		if (!accept) {
-			activePoints.erase(activePoints.begin() + index); // was too close to another point
-		}
-	}
-
-	auto endTime = std::chrono::high_resolution_clock::now();
-	double elapsed = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() * 0.001;
-	std::cout << "Generated Poisson points in " << elapsed << " ms" << std::endl;
-
-	return points;
-}
-
-bool IsValid(Coordinate point, int width, int height, float radius, float cellSize, vector<Coordinate>& points, vector<vector<int>>& grid) {
-	// x and y needs to be within our boundaries
-	if (point.x >= 0 && point.x < width && point.y >= 0 && point.y < height) {
-		int backingX = (int)(point.x / cellSize);
-		int backingY = (int)(point.y / cellSize);
-
-		// search around this point with a distance of radius
-		int startX = max(0, backingX - 2);
-		int endX = min(backingX + 2, (int)grid[0].size() - 1);
-		int startY = max(0, backingY - 2);
-		int endY = min(backingY + 2, (int)grid.size() - 1);
-
-		for (int x = startX; x <= endX; x++) {
-			for (int y = startY; y <= endY; y++) {
-				int pointIndex = grid[y][x] - 1;
-
-				if (pointIndex != -1) {
-					// means that we are taken
-					// compute distance
-					float distance = EuclideanDistanceSquared(point.x, point.y, points[pointIndex].x, points[pointIndex].y);
-					if (distance < radius * radius) {
-						return false;
-					}
-				}
-			}
-		}
-
-		return true;
-	}
-
-	return false;
 }
 
 void ComputeVoronoiLocal(Pixel* grid, int height, int width, int searchRadius) {

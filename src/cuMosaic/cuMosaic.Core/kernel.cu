@@ -10,7 +10,8 @@
 
 #define BLOCK_SIZE 1024
 
-__device__ int EuclideanDistanceSquared(int x1, int y1, int x2, int y2) {
+// TODO I'm not sure if the DistanceFunction.EuclideanDistanceSquared can be used within this cuda code
+__device__ int CudaEuclideanDistanceSquared(int x1, int y1, int x2, int y2) {
 	return (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
 }
 
@@ -24,7 +25,7 @@ __global__ void VoronoiGlobalSearch(Pixel* cudaGrid, Pixel* cudaSeeds, int gridH
 		unsigned int minDistance = INT_MAX;
 		Pixel closestSeed;
 		for (int seedPos = 0; seedPos < numSeeds; seedPos++) {
-			int distance = EuclideanDistanceSquared(cudaGrid[pos].row, cudaGrid[pos].col, cudaSeeds[seedPos].row, cudaSeeds[seedPos].col);
+			int distance = CudaEuclideanDistanceSquared(cudaGrid[pos].row, cudaGrid[pos].col, cudaSeeds[seedPos].row, cudaSeeds[seedPos].col);
 
 			if (distance <= minDistance) {
 				minDistance = distance;
@@ -79,7 +80,7 @@ __global__ void VoronoiLocalSearch(Pixel* cudaGrid, Pixel* cudaSeeds, int gridHe
 		for (int boxCol = startCol; boxCol <= endCol; boxCol++) {
 			int boxPos = (boxRow * gridWidth) + boxCol;
 			if (cudaGrid[boxPos].seed) {
-				int dist = EuclideanDistanceSquared(cudaGrid[pos].row, cudaGrid[pos].col, cudaGrid[boxPos].row, cudaGrid[boxPos].col);
+				int dist = CudaEuclideanDistanceSquared(cudaGrid[pos].row, cudaGrid[pos].col, cudaGrid[boxPos].row, cudaGrid[boxPos].col);
 
 				if (dist <= minDistance) {
 					minDistance = dist;
@@ -99,7 +100,7 @@ __global__ void VoronoiLocalSearch(Pixel* cudaGrid, Pixel* cudaSeeds, int gridHe
 	// Note - never actually seen the local search fail, but it is a possibility
 	minDistance = INT_MAX;
 	for (int seedPos = 0; seedPos < numSeeds; seedPos++) {
-		int distance = EuclideanDistanceSquared(cudaGrid[pos].row, cudaGrid[pos].col, cudaSeeds[seedPos].row, cudaSeeds[seedPos].col);
+		int distance = CudaEuclideanDistanceSquared(cudaGrid[pos].row, cudaGrid[pos].col, cudaSeeds[seedPos].row, cudaSeeds[seedPos].col);
 
 		if (distance <= minDistance) {
 			minDistance = distance;

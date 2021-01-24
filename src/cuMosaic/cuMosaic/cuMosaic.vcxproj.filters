@@ -21,6 +21,9 @@
     <ClCompile Include="..\cuMosaic.Core\FileHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\cuMosaic.Core\FastPoisson.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuMosaic.h">

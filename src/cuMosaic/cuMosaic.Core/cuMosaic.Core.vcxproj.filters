@@ -8,8 +8,12 @@
     <ClInclude Include="FileHelper.h" />
     <ClInclude Include="Coordinate.h" />
     <ClInclude Include="Color.h" />
+    <ClInclude Include="FastPoisson.h" />
+    <ClInclude Include="DistanceFunctions.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FileHelper.cpp" />
+    <ClCompile Include="FastPoisson.cpp" />
+    <ClCompile Include="DistanceFunctions.cpp" />
   </ItemGroup>
 </Project>

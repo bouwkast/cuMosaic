@@ -83,12 +83,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Color.h" />
-    <ClInclude Include="Coordinate.h"/>
+    <ClInclude Include="Coordinate.h" />
+    <ClInclude Include="DistanceFunctions.h" />
+    <ClInclude Include="FastPoisson.h" />
     <ClInclude Include="FileHelper.h" />
     <ClInclude Include="Pixel.h">
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DistanceFunctions.cpp" />
+    <ClCompile Include="FastPoisson.cpp" />
     <ClCompile Include="FileHelper.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
